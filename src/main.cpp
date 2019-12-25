@@ -2,6 +2,8 @@
 #include <string>
 #include <fstream>
 
+#include <stb/stb_image.h>
+
 #include "gl_core.hpp"
 
 std::string read_file(const char* path) {
@@ -55,6 +57,29 @@ unsigned int create_shader(const char* vertex, const char* fragment) {
     return prog;
 }
 
+unsigned int create_texture(const char* path) {
+    using namespace std::literals::string_literals;
+    int w, h, channels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(path, &w, &h, &channels, 4);
+    if (!data) {
+        throw std::runtime_error("Failed to load image at path "s + path);
+    }
+
+    unsigned int tex;
+    glCreateTextures(GL_TEXTURE_2D, 1, &tex);
+    glTextureStorage2D(tex, 1, GL_RGBA8, w, h);
+    glTextureSubImage2D(tex, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_R, GL_REPEAT);
+
+    stbi_image_free(data);
+
+    return tex;
+}
+
 int main() try {
     auto window = init(800, 600, "Terrain Experiments");
 
@@ -68,18 +93,29 @@ int main() try {
     unsigned int tex_buffer;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
+    glGenBuffers(1, &tex_buffer);
 
     float vertices[] = {-1, -1, 0, 0, 1, 0, 1, -1, 0};
-
     glNamedBufferData(vbo, 9 * sizeof(float), vertices, GL_STATIC_DRAW);
-
     glEnableVertexArrayAttrib(vao, 0);
     glVertexArrayVertexBuffer(vao, 0, vbo, 0, 3 * sizeof(float));
     glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
     glVertexArrayAttribBinding(vao, 0, 0);
+
+    float tex_coords[] = {0, 0, 0.5, 1, 1, 0};
+    glNamedBufferData(tex_buffer, 6 * sizeof(float), tex_coords, GL_STATIC_DRAW);
+    glEnableVertexArrayAttrib(vao, 1);
+    glVertexArrayVertexBuffer(vao, 1, tex_buffer, 0, 2 * sizeof(float));
+    glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(vao, 1, 1);
+
     // prepare for rendering
     glBindVertexArray(vao);
     glUseProgram(shader);
+
+    unsigned int tex = create_texture("data/textures/pengu.png");
+
+    glBindTextureUnit(0, tex);
 
     while(!glfwWindowShouldClose(window)) {
         try {
