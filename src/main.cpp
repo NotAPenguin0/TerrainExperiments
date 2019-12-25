@@ -65,16 +65,18 @@ int main() try {
 
     unsigned int vao;
     unsigned int vbo;
+    unsigned int tex_buffer;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
 
     float vertices[] = {-1, -1, 0, 0, 1, 0, 1, -1, 0};
+
     glNamedBufferData(vbo, 9 * sizeof(float), vertices, GL_STATIC_DRAW);
+
     glEnableVertexArrayAttrib(vao, 0);
     glVertexArrayVertexBuffer(vao, 0, vbo, 0, 3 * sizeof(float));
     glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
     glVertexArrayAttribBinding(vao, 0, 0);
-
     // prepare for rendering
     glBindVertexArray(vao);
     glUseProgram(shader);
