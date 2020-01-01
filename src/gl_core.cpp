@@ -40,6 +40,10 @@ static void gl_error_callback([[maybe_unused]] GLenum source,
     std::cerr << "[OpenGL] " << severity_string << ": " << message << std::endl;
 }
 
+static void framebuffer_resize_callback(GLFWwindow* window, int w, int h) {
+    (void)window;
+    glViewport(0, 0, w, h);
+}
 
 GLFWwindow* init(size_t w, size_t h, const char* title) {
     glfwSetErrorCallback(glfw_error_callback);
@@ -52,6 +56,7 @@ GLFWwindow* init(size_t w, size_t h, const char* title) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+    glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_SAMPLES, 4);
 
     GLFWwindow* window = glfwCreateWindow(w, h, title, nullptr, nullptr);
@@ -60,6 +65,7 @@ GLFWwindow* init(size_t w, size_t h, const char* title) {
     }
 
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_resize_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         return nullptr;

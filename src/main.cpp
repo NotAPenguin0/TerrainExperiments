@@ -1,10 +1,16 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <vector>
+#include <random>
+#include <cmath>
+
 
 #include <stb/stb_image.h>
 
 #include "gl_core.hpp"
+#include "noise.hpp"
+#include "math.hpp"
 
 std::string read_file(const char* path) {
     using namespace std::literals::string_literals;
@@ -80,8 +86,49 @@ unsigned int create_texture(const char* path) {
     return tex;
 }
 
+// std::vector<unsigned char> get_combined_perlin_noise_buffer(size_t w, size_t h, size_t iterations) {
+//     static float perlin_2d_min = -std::sqrt(0.5f);
+//     static float perlin_2d_max = std::sqrt(0.5f);
+
+//     std::vector<unsigned char> buffer(w * h, 0);
+//     for (int it = 0; it < iterations; ++it) {
+//         size_t const detail = std::pow(2, it);
+//         float it_weight = (1.0f / std::pow(2, it + 1));
+//         gradient_grid gradients(detail, detail);
+//         for (int y = 0; y < h; ++y) {
+//             for (int x = 0; x < w; ++x) {
+//                 int i = y * w + x;
+//                 float value = perlin_noise((float)x / w * detail, (float)y / h * detail, gradients);
+                
+//                 value = map_value(value, perlin_2d_min, perlin_2d_max, 0.0f, 1.0f);
+//                 value *= 255;
+
+//                 buffer[i] += value * it_weight;
+//             }
+//         }
+//     }
+//     return buffer;
+// }
+
+unsigned int perlin_noise_texture(size_t w, size_t h, size_t scale) {
+    PerlinNoise noise(scale);
+    std::vector<unsigned char> noise_buf = noise.get_buffer(w, h);
+//    std::vector<unsigned char> noise = get_combined_perlin_noise_buffer(w, h, 3);
+    unsigned int tex;
+    glCreateTextures(GL_TEXTURE_2D, 1, &tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTextureStorage2D(tex, 1, GL_R8, w, h);
+    glTextureSubImage2D(tex, 0, 0, 0, w, h, GL_RED, GL_UNSIGNED_BYTE, noise_buf.data());
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    
+    return tex;
+}
+
 int main() try {
-    auto window = init(800, 600, "Terrain Experiments");
+    auto window = init(800, 800, "Terrain Experiments");
 
     std::string vertex = read_file("data/shaders/basic.vert");
     std::string fragment = read_file("data/shaders/basic.frag");
@@ -95,15 +142,15 @@ int main() try {
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &tex_buffer);
 
-    float vertices[] = {-1, -1, 0, 0, 1, 0, 1, -1, 0};
-    glNamedBufferData(vbo, 9 * sizeof(float), vertices, GL_STATIC_DRAW);
+    float vertices[] = {-1, 1, 0, -1, -1, 0, 1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0};
+    glNamedBufferData(vbo,  18 * sizeof(float), vertices, GL_STATIC_DRAW);
     glEnableVertexArrayAttrib(vao, 0);
     glVertexArrayVertexBuffer(vao, 0, vbo, 0, 3 * sizeof(float));
     glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
     glVertexArrayAttribBinding(vao, 0, 0);
 
-    float tex_coords[] = {0, 0, 0.5, 1, 1, 0};
-    glNamedBufferData(tex_buffer, 6 * sizeof(float), tex_coords, GL_STATIC_DRAW);
+    float tex_coords[] = {0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1};
+    glNamedBufferData(tex_buffer, 12 * sizeof(float), tex_coords, GL_STATIC_DRAW);
     glEnableVertexArrayAttrib(vao, 1);
     glVertexArrayVertexBuffer(vao, 1, tex_buffer, 0, 2 * sizeof(float));
     glVertexArrayAttribFormat(vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
@@ -114,15 +161,42 @@ int main() try {
     glUseProgram(shader);
 
     unsigned int tex = create_texture("data/textures/pengu.png");
+    size_t detail = 1;
+    unsigned int noise = perlin_noise_texture(800, 800, detail);
+    glBindTextureUnit(0, noise);
 
-    glBindTextureUnit(0, tex);
+    bool held = false;
 
     while(!glfwWindowShouldClose(window)) {
         try {
+            if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+                if (!held) {
+                    held = true;
+                    ++detail;
+                    glDeleteTextures(1, &noise);
+                    noise = perlin_noise_texture(800, 800, detail);
+                    glBindTextureUnit(0, noise);
+                }
+            } else {
+                held = false;
+            }
+
+            if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS && detail > 1) {
+                if (!held) {
+                    held = true;
+                    --detail;
+                    glDeleteTextures(1, &noise);
+                    noise = perlin_noise_texture(800, 800, detail);
+                    glBindTextureUnit(0, noise);
+                }
+            } else {
+                held = false;
+            }
+
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
 
             glfwPollEvents();
             glfwSwapBuffers(window);

@@ -8,5 +8,4 @@ GLFWwindow* init(size_t w, size_t h, const char* title);
 void create_debug_output();
 
 
-
 #endif
