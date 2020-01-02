@@ -1,8 +1,10 @@
 set(TERRAINS_SOURCES
     ${TERRAINS_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/camera.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/noise.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/math.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/input.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/gl_core.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/stb_impl.cpp"
     PARENT_SCOPE

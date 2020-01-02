@@ -14,6 +14,11 @@ add_subdirectory("external")
 
 add_executable(Terrains ${TERRAINS_SOURCES})
 
-target_compile_options(Terrains PUBLIC -std=c++17 -Wall)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(Terrains PUBLIC -std=c++17 -Wall)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(Terrains PUBLIC /std:c++17 /W0)
+endif()
+
 target_include_directories(Terrains PUBLIC ${TERRAINS_INCLUDE_DIRECTORIES})
 target_link_libraries(Terrains PUBLIC ${TERRAINS_LINK_LIBRARIES})
